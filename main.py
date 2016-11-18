@@ -3,9 +3,9 @@ from prettytable import PrettyTable
 import http.client
 import json
 import sys
+import datetime
 
-
-def get_league_table(league_name):
+def get_league_id(league_name):
 	connection = http.client.HTTPConnection('api.football-data.org')
 	headers = { 'X-Auth-Token': '8b1b8ec671d745a0b7265401137fcf0e', 'X-Response-Control': 'minified' }
 	connection.request('GET', '/v1/competitions/', None, headers )
@@ -13,10 +13,9 @@ def get_league_table(league_name):
 	flag = False
 
 	for i in response:
-		if( i['league'] == league_name):
+		if( i['league'] == league_name.upper()):
 			league_id = str(i['id'])
-			flag = True
-			break
+			return league_id
 	else:
 		print ("Invalid League Name: Please refer the below list- \n"+"ID: league(Description)" )
 		list_of_competitions = "424: EC(European Championships France 2016) \n" \
@@ -35,8 +34,31 @@ def get_league_table(league_name):
 		"439: PPL(Primeira Liga 2016/17) \n"+\
 		"440: CL(Champions League 2016/17) \n" 
 		print(list_of_competitions)
+
+
+def show_next_game(league_name):
+	league_id = get_league_id(league_name)
+
+	connection = http.client.HTTPConnection('api.football-data.org')
+	headers = { 'X-Auth-Token': '8b1b8ec671d745a0b7265401137fcf0e', 'X-Response-Control': 'minified' }
+
+	connection.request('GET', '/v1/competitions/'+str(league_id)+'/fixtures', None, headers )
 	
-	if flag:
+	response = json.loads(connection.getresponse().read().decode())
+	
+	for i in response['fixtures']:
+		if(i['status'] == "TIMED"):
+			print (i['homeTeamName'] + " v/s " + i['awayTeamName'] + " "+i['date'] + "\n" )
+
+
+
+
+def show_league_table(league_name):
+	league_id = get_league_id(league_name)
+	if( league_id is not None):
+		connection = http.client.HTTPConnection('api.football-data.org')
+		headers = { 'X-Auth-Token': '8b1b8ec671d745a0b7265401137fcf0e', 'X-Response-Control': 'minified' }
+
 		connection.request('GET', '/v1/competitions/'+ league_id +'/leagueTable', None, headers )
 		response = json.loads(connection.getresponse().read().decode())
 		t = PrettyTable(['Team' ,'Games','GF','GA','GD', 'Points'])
@@ -45,14 +67,24 @@ def get_league_table(league_name):
 			t.add_row([ i['team'], i['playedGames'], i['goals'], i['goalsAgainst'], i['goalDifference'], i['points'] ])
 		print (t)
 
-def main():	
-	if( sys.argv[1] == "League"):
+def main():
+	if (len(sys.argv) == 1):
+		print ("No argument Entered !")
+
+	elif( sys.argv[1].upper() == "LEAGUE"):
 		LeagueName = sys.argv[2]
 
 		if( LeagueName is None ):
 			print ("No league name entered !")
 		else:
-			get_league_table(LeagueName)
+			show_league_table(LeagueName)
+	elif( sys.argv[1].upper() == "NEXTWEEK"):
+		LeagueName = sys.argv[2]
+
+		if( LeagueName is None):
+			print("No league entered !")
+		else:
+			show_next_game(LeagueName)
 
 	else :
 		print ("Invalid Argument: "+ sys.argv[1])

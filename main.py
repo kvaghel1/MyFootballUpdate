@@ -1,6 +1,6 @@
 from prettytable import PrettyTable
 from datetime import date
-
+import time
 import http.client
 import json
 import sys
@@ -35,28 +35,81 @@ def get_league_id(league_name):
 		"439: PPL(Primeira Liga 2016/17) \n"+\
 		"440: CL(Champions League 2016/17) \n" 
 		print(list_of_competitions)
-
-def get_team_id(team_name):
-	connection = http.client.HTTPConnection('api.football-data.org')
-	headers = { 'X-Auth-Token': '8b1b8ec671d745a0b7265401137fcf0e', 'X-Response-Control': 'minified' }
-	
-	#total teams: 1 to 851 	
-	for i in range(1,852):
-		print (i)
-		connection.request('GET', '/v1/teams/'+str(i)+'/', None, headers )
-		response = json.loads(connection.getresponse().read().decode())
-		print (response)
-		if(response['shortName'].upper() == team_name.upper()):
-			return i
-	
-#--team
-def show_team(team_name):
-	print (get_team_id(team_name))
-
 def to_day_time(a):
 	#2016-11-19T12:30:00Z
 	day_list = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-	return (day_list[datetime.date(int(a[0:4]),int(a[5:7]),int(a[8:10])).weekday()] + " " + str(int((a[11:13])) - 5 % 24)+str(a[13:16]) )
+	return (str(a[5:7])+ "/" + str(a[8:10]) + " " + day_list[datetime.date(int(a[0:4]),int(a[5:7]),int(a[8:10])).weekday()] + " " + str(int((a[11:13])) - 5 % 24)+str(a[13:16]) )
+
+def get_team_id(team_name):
+	team_dict = { 61:"che",
+				 	64:"liv",
+				  	354:"cry",
+				   	62:"eve",
+				    322:"hull",
+				    65:"mci",
+				    66: "mun",
+				    343: "mid",
+				    340:"sou",
+				    70:"stk",
+				    71:"sun",
+				    72:"swa",
+				    73:"tot",
+				    346:"wat",
+				    563:"whu",
+				    74:"wba",
+				    338:"lei"
+					 }
+	for key,value in team_dict.items():
+		if value == team_name:
+			return key
+
+
+	
+#--team
+def show_team(team_name):
+	team_id = get_team_id(team_name) 
+	connection = http.client.HTTPConnection('api.football-data.org')
+	headers = { 'X-Auth-Token': '8b1b8ec671d745a0b7265401137fcf0e', 'X-Response-Control': 'minified' }
+	connection.request('GET','/v1/teams/'+str(team_id)+'/fixtures/', None, headers )
+	response = json.loads(connection.getresponse().read().decode())
+	count = 0
+	for i in response["fixtures"]:
+	#	print (count)
+		if i["status"] == "TIMED":
+			match_obj = i
+#			print (i["matchday"]," --> ",i)
+			t = PrettyTable(['Against','Opp - Position','H/A','Day - Time'])
+			if match_obj['homeTeamId'] == team_id:
+				t.add_row([match_obj['awayTeamName'], 'XX' , 'H' , to_day_time(match_obj['date'])])
+			else:
+				t.add_row([match_obj['homeTeamName'], 'XX' , 'A' , to_day_time(match_obj['date'])])
+
+			match_obj = response["fixtures"][count+1]
+			if match_obj['homeTeamId'] == team_id:
+				t.add_row([match_obj['awayTeamName'], 'XX' , 'H' , to_day_time(match_obj['date'])])
+			else:
+				t.add_row([match_obj['homeTeamName'], 'XX' , 'A' , to_day_time(match_obj['date'])])
+
+			match_obj = response["fixtures"][count+2]
+			if match_obj['homeTeamId'] == team_id:
+				t.add_row([match_obj['awayTeamName'], 'XX' , 'H' , to_day_time(match_obj['date'])])
+			else:
+				t.add_row([match_obj['homeTeamName'], 'XX' , 'A' , to_day_time(match_obj['date'])])
+
+			match_obj = response["fixtures"][count+3]
+			if match_obj['homeTeamId'] == team_id:
+				t.add_row([match_obj['awayTeamName'], 'XX' , 'H' , to_day_time(match_obj['date'])])
+			else:
+				t.add_row([match_obj['homeTeamName'], 'XX' , 'A' , to_day_time(match_obj['date'])])
+
+			match_obj = response["fixtures"][count+4]
+			if match_obj['homeTeamId'] == team_id:
+				t.add_row([match_obj['awayTeamName'], 'XX' , 'H' , to_day_time(match_obj['date'])])
+			else:
+				t.add_row([match_obj['homeTeamName'], 'XX' , 'A' , to_day_time(match_obj['date'])])
+			print (t)
+			break
+		count+=1
 
 def show_next_game(league_name):
 	league_id = get_league_id(league_name)
